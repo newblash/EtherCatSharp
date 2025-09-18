@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35617.110
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EtherCatSharp", "EtherCatSharp.csproj", "{07364C62-7D2D-468D-8430-9F9CA788B55C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ECS_DEMO", "..\ECS_DEMO\ECS_DEMO.csproj", "{93B2DF12-B6EC-498B-B4AC-12D082F2F7CB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{07364C62-7D2D-468D-8430-9F9CA788B55C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{07364C62-7D2D-468D-8430-9F9CA788B55C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{07364C62-7D2D-468D-8430-9F9CA788B55C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{07364C62-7D2D-468D-8430-9F9CA788B55C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{93B2DF12-B6EC-498B-B4AC-12D082F2F7CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{93B2DF12-B6EC-498B-B4AC-12D082F2F7CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{93B2DF12-B6EC-498B-B4AC-12D082F2F7CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{93B2DF12-B6EC-498B-B4AC-12D082F2F7CB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8C41DEFC-549C-4C88-BF9F-9B9F3F94D80E}
+	EndGlobalSection
+EndGlobal
