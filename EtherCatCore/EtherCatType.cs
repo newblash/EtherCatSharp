@@ -992,8 +992,9 @@ namespace EtherCatSharp.EtherCatCore
         // 从 uint 数组复制到 byte 数组
         public static void memcpy(Span<byte> dst, int dstOffset, Span<uint> src, int srcOffset, int size)
         {
-            if (src.Length * sizeof(uint) > dst.Length)
-                throw new ArgumentException("Destination array is too small");
+            //if (src.Length * sizeof(uint) > dst.Length)
+                if (size > dst.Length)
+                    throw new ArgumentException("Destination array is too small");
 
             // 将 uint span 重新解释为 byte span
             ReadOnlySpan<byte> sourceAsByte = MemoryMarshal.AsBytes(src);

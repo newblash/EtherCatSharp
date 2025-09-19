@@ -21,14 +21,14 @@ namespace EtherCatSharp.EtherCatCore
         {
             if (length > 0)
             {
-                Console.Write($"序号:{count} 命令:{com} 数据:");
+                //Console.Write($"序号:{count} 命令:{com} 数据:");
 
-                for (int i = srcoffset; i < srcoffset + length; i++)
-                {
-                    Console.Write($"0x{data[i]:X} ");
-                }
-                Console.Write("\n");
-                count++;
+                //for (int i = srcoffset; i < srcoffset + length; i++)
+                //{
+                //    Console.Write($"0x{data[i]:X} ");
+                //}
+                //Console.Write("\n");
+                //count++;
                 switch (com)
                 {
                     case EC_CMD_NOP:

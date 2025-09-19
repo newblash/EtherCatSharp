@@ -33,11 +33,6 @@ namespace SharpPcap
         string? Filter { get; set; }
 
         /// <summary>
-        /// Mac address of the physical device
-        /// </summary>
-        System.Net.NetworkInformation.PhysicalAddress? MacAddress { get; }
-
-        /// <summary>
         /// Open the device. To start capturing call the 'StartCapture' function
         /// </summary>
         /// <param name="configuration">
@@ -45,15 +40,11 @@ namespace SharpPcap
         /// </param>
         void Open(DeviceConfiguration configuration);
 
+
         /// <summary>
         /// Closes this adapter
         /// </summary>
         void Close();
-
-        /// <summary>
-        /// Return the pcap link layer value of an adapter. 
-        /// </summary>
-        LinkLayers LinkType { get; }
     }
 }
 

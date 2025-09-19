@@ -1,9 +1,10 @@
-﻿using SharpPcap;
-using SharpPcap.LibPcap;
+﻿using EtherCatSharp.SharpPcap;
+using SharpPcap;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -84,10 +85,9 @@ namespace EtherCatSharp.EtherCatCore
                 port.stack.rxsa = port.rxsa;
                 ecx_clear_rxbufstat(port.rxbufstat);
             }
-
-
+            
             // 查找设备
-            device = LibPcapLiveDeviceList.Instance.FirstOrDefault(d => d.Name == ifname || d.Description == ifname || d.Interface?.FriendlyName == ifname || d.Interface?.Name == ifname);
+            device = LibPcapLiveDeviceList.Instance.FirstOrDefault(d => d.Name == ifname || d.Description == ifname);
             if (device == null)
                 return -1; // 未找到设备
 
@@ -259,21 +259,26 @@ namespace EtherCatSharp.EtherCatCore
                 stack = port.redport.stack;
             }
             int lp = port.tempinbuf.Length;
-            var res = device.GetNextPacket(out var rawCapture);
-            if (res <= 0)
+            if (device?.GetNextPacket(out var rawCapture) == GetPacketStatus.PacketRead)
             {
-                port.tempinbufs = 0;
-                return 0;
+                //Debug.WriteLine(bytes.Length);
+                int bytesRx = rawCapture.Length;
+                if (bytesRx > lp)
+                {
+                    bytesRx = lp;
+                }
+                // 将数据复制到 tempbuf
+                memcpy(stack.tempbuf, 0, rawCapture.ToArray(), 0, bytesRx);
+                port.tempinbufs = bytesRx;
+                return bytesRx > 0 ? 1 : 0;
             }
-            int bytesRx = rawCapture.Data.Length;
-            if (bytesRx > lp)
-            {
-                bytesRx = lp;
-            }
-            // 将数据复制到 tempbuf
-            memcpy(stack.tempbuf, 0, rawCapture.Data.ToArray(), 0, bytesRx);
-            port.tempinbufs = bytesRx;
-            return bytesRx > 0 ? 1 : 0;
+            //var res = device.GetNextPacket(out var rawCapture);
+            //if (res <= 0)
+            //{
+            //    port.tempinbufs = 0;
+            //    return 0;
+            //}
+            return 0;
         }
         public int ecx_inframe(ecx_portt port, byte idx, int stacknumber = 0)
         {
@@ -317,7 +322,7 @@ namespace EtherCatSharp.EtherCatCore
                         {
                             ecp = stack.tempbuf.ToStruct<ec_comt>(ETH_HEADERSIZE);
                             l = (ushort)(etohs(ecp.elength) & 0x0fff);
-                            Console.WriteLine("L="+l);
+                            //Console.WriteLine("L="+l);
                             idxf = ecp.index;
                             /* found index equals requested index ? */
                             if (idxf == idx)

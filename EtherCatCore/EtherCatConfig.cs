@@ -645,7 +645,6 @@ namespace EtherCatSharp.EtherCatCore
                 }
             }
         }
-
         public void ecx_config_create_input_mappings(ecx_contextt context, Span<byte> pIOmap, byte group, ushort slave, ref uint LogAddr, ref byte BitPos)
         {
             int BitCount = 0;

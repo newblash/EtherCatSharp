@@ -8,7 +8,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace SharpPcap.LibPcap
+namespace SharpPcap
 {
     /// <summary>
     /// List of available Pcap Interfaces.
@@ -79,21 +79,6 @@ namespace SharpPcap.LibPcap
                 // retrieve the current device list
                 var newDeviceList = GetDevices();
 
-                // update existing devices with values in the new list
-                foreach (var newItem in newDeviceList)
-                {
-                    foreach (var existingItem in base.Items)
-                    {
-                        if (newItem.Name == existingItem.Name)
-                        {
-                            // copy the flags and addresses over
-                            existingItem.Interface = newItem.Interface;
-
-                            break; // break out of the foreach(existingItem)
-                        }
-                    }
-                }
-
                 // find items the current list is missing
                 foreach (var newItem in newDeviceList)
                 {
@@ -144,27 +129,5 @@ namespace SharpPcap.LibPcap
                 }
             }
         }
-
-        #region PcapDevice Indexers
-        /// <param name="Name">The name or description of the pcap interface to get.</param>
-        public LibPcapLiveDevice this[string Name]
-        {
-            get
-            {
-                // lock to prevent issues with multi-threaded access
-                // with other methods
-                lock (this)
-                {
-                    var devices = (List<LibPcapLiveDevice>)base.Items;
-                    var dev = devices.Find(delegate (LibPcapLiveDevice i) { return i.Name == Name; });
-                    var result = dev ?? devices.Find(delegate (LibPcapLiveDevice i) { return i.Description == Name; });
-
-                    if (result == null)
-                        throw new IndexOutOfRangeException();
-                    return result;
-                }
-            }
-        }
-        #endregion
     }
 }

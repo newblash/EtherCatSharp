@@ -480,6 +480,15 @@ namespace EtherCatSharp.EtherCatCore
                             {
                                 /* copy parameter in parameter buffer */
                                 memcpy(p, 0, aSDOp.Ldata, 0, bytesize);
+
+                                //Span<uint> ldataSpan = aSDOp.Ldata;
+                                //// 获取索引 1 处的 uint 的字节表示
+                                //Span<byte> sourceBytes = MemoryMarshal.AsBytes(ldataSpan.Slice(0, bytesize));
+                                //// 只取前 SDOlen 个字节
+                                //sourceBytes = sourceBytes.Slice(0, bytesize);
+                                //// 复制到 bp
+                                //sourceBytes.CopyTo(p);
+
                                 /* return the real parameter size */
                                 psize = bytesize;
                             }
@@ -503,6 +512,15 @@ namespace EtherCatSharp.EtherCatCore
                                 {
                                     /* copy parameter data in parameter buffer */
                                     memcpy(hp, 0, aSDOp.Ldata, 1, Framedatasize);
+
+                                    //Span<uint> ldataSpan = aSDOp.Ldata;
+                                    //// 获取索引 1 处的 uint 的字节表示
+                                    //Span<byte> sourceBytes = MemoryMarshal.AsBytes(ldataSpan.Slice(1, Framedatasize));
+                                    //// 只取前 SDOlen 个字节
+                                    //sourceBytes = sourceBytes.Slice(0, Framedatasize);
+                                    //// 复制到 bp
+                                    //sourceBytes.CopyTo(hp);
+
                                     /* increment buffer pointer */
                                     hp.Slice(Framedatasize);
                                     psize = Framedatasize;
@@ -585,10 +603,8 @@ namespace EtherCatSharp.EtherCatCore
                                     //memcpy(bp, 0, aSDOp.Ldata, 1, SDOlen); //这个方法不好使了,换成直接赋值
                                     // 获取 ldata 的 Span
                                     Span<uint> ldataSpan = aSDOp.Ldata;
-
                                     // 获取索引 1 处的 uint 的字节表示
                                     Span<byte> sourceBytes = MemoryMarshal.AsBytes(ldataSpan.Slice(1, SDOlen));
-
                                     // 只取前 SDOlen 个字节
                                     sourceBytes = sourceBytes.Slice(0, SDOlen);
                                     // 复制到 bp

@@ -295,6 +295,24 @@ namespace EtherCatSharp.EtherCatCore
 
             return lowest;
         }
+        public int ecx_writestate(ecx_contextt context, ushort slave)
+        {
+            int ret;
+            ushort configadr, slstate;
+
+            if (slave == 0)
+            {
+                slstate = htoes(context.slavelist[slave].state);
+                byte[] bytes = BitConverter.GetBytes(slstate);
+                ret = ecx_BWR(context.port, 0, ECT_REG_ALCTL, (ushort)bytes.Length, bytes, EC_TIMEOUTRET3);
+            }
+            else
+            {
+                configadr = context.slavelist[slave].configadr;
+                ret = ecx_FPWRw(context.port, configadr, ECT_REG_ALCTL, htoes(context.slavelist[slave].state), EC_TIMEOUTRET3);
+            }
+            return ret;
+        }
         public int ecx_FPRD_multi(ecx_contextt context, int n, ushort[] configlst, ec_alstatust[] slstatlst, int timeout)
         {
             int wkc;
@@ -753,7 +771,7 @@ namespace EtherCatSharp.EtherCatCore
             return FMMU.nFMMU;
         }
 
-        public void ecx_siistring(ecx_contextt context,ref string str, ushort slave, ushort Sn)
+        public void ecx_siistring(ecx_contextt context, ref string str, ushort slave, ushort Sn)
         {
             ushort a, i, j, l, n, ba;
             byte eectl = context.slavelist[slave].eep_pdi;
@@ -1200,7 +1218,7 @@ namespace EtherCatSharp.EtherCatCore
             Ec.ErrorCode = Detail;
             ecx_pusherror(context, Ec);
         }
-        public void ecx_mbxemergencyerror(ecx_contextt context, ushort Slave, ushort ErrorCode, ushort ErrorReg,byte b1, ushort w1, ushort w2)
+        public void ecx_mbxemergencyerror(ecx_contextt context, ushort Slave, ushort ErrorCode, ushort ErrorReg, byte b1, ushort w1, ushort w2)
         {
             ec_errort Ec = new ec_errort();
             Ec.Time = new ec_timet() { sec = (uint)DateTime.Now.Second, usec = (uint)((DateTime.Now.Ticks / 10) % 1_000_000) };
@@ -1256,7 +1274,7 @@ namespace EtherCatSharp.EtherCatCore
                         wkc = ecx_FPRD(context.port, configadr, mbxro, mbxl, mbx, EC_TIMEOUTRET); /* get mailbox */
                         if ((wkc > 0) && ((mbxh.mbxtype & 0x0f) == 0x00)) /* Mailbox error response? */
                         {
-                            
+
                             MBXEp = mbx.ToStruct<ec_mbxerrort>();
                             ecx_mbxerror(context, slave, etohs(MBXEp.Detail));
                             wkc = 0; /* prevent emergency to cascade up, it is already handled. */

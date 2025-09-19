@@ -5,16 +5,17 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Buffers;
 using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SharpPcap.LibPcap
+namespace SharpPcap
 {
     /// <summary>
     /// Capture live packets from a network device
     /// </summary>
-    public class LibPcapLiveDevice : PcapDevice, ILiveDevice
+    public class LibPcapLiveDevice : PcapDevice
     {
         private readonly PcapInterface _pcapInterface;
         /// <summary>
@@ -22,7 +23,7 @@ namespace SharpPcap.LibPcap
         /// </summary>
         /// <param name="pcapInterface">关联的网络接口。</param>
         /// <exception cref="ArgumentNullException"><paramref name="pcapInterface"/> 为 null。</exception>
-        public LibPcapLiveDevice(PcapInterface pcapInterface) : base(pcapInterface)
+        public LibPcapLiveDevice(PcapInterface pcapInterface) : base()
         {
             _pcapInterface = pcapInterface ?? throw new ArgumentNullException(nameof(pcapInterface));
         }
@@ -43,14 +44,6 @@ namespace SharpPcap.LibPcap
         }
 
         /// <summary>
-        /// Addresses that represent this device
-        /// </summary>
-        public virtual ReadOnlyCollection<PcapAddress> Addresses
-        {
-            get { return new ReadOnlyCollection<PcapAddress>(_pcapInterface.Addresses); }
-        }
-
-        /// <summary>
         /// Gets the pcap description of this device
         /// </summary>
         public override string Description
@@ -67,14 +60,6 @@ namespace SharpPcap.LibPcap
         }
 
         /// <summary>
-        /// True if device is a loopback interface, false if not
-        /// </summary>
-        public virtual bool Loopback
-        {
-            get { return (Flags & Pcap.PCAP_IF_LOOPBACK) == 1; }
-        }
-
-        /// <summary>
         /// Open the device. To start capturing call the 'StartCapture' function
         /// </summary>
         /// <param name="configuration">
@@ -86,28 +71,20 @@ namespace SharpPcap.LibPcap
             {
                 return;
             }
-            var credentials = configuration.Credentials ?? _pcapInterface.Credentials;
             var mode = configuration.Mode;
 
             // Check if immediate is supported
-            var immediate_supported = Pcap.LibpcapVersion >= new Version(1, 5, 0);
+            //var immediate_supported = Pcap.LibpcapVersion >= new Version(1, 5, 0);
             // Check if we can do immediate by setting mintocopy to 0
             // See https://www.tcpdump.org/manpages/pcap_set_immediate_mode.3pcap.html
             var mintocopy_supported = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
             ErrorBuffer errbuf; //will hold errors
 
-            // set the StopCaptureTimeout value to twice the read timeout to ensure that
-            // we wait long enough before considering the capture thread to be stuck when stopping
-            // a background capture via StopCapture()
-            //
-            // NOTE: Doesn't affect Mono if unix poll is available, doesn't affect Linux because
-            //       Linux devices have no timeout, they always block. Only affects Windows devices.
-            StopCaptureTimeout = new TimeSpan(0, 0, 0, 0, configuration.ReadTimeout * 2);
-
             // modes other than OpenFlags.Promiscuous require pcap_open()
             var otherModes = mode & ~DeviceModes.Promiscuous;
-            if (immediate_supported || mintocopy_supported)
+            //if (immediate_supported || mintocopy_supported)
+            if (mintocopy_supported)
             {
                 // We can do MaxResponsiveness through Immediate mode
                 otherModes &= ~DeviceModes.MaxResponsiveness;
@@ -118,16 +95,12 @@ namespace SharpPcap.LibPcap
                 immediateMode = true;
             }
 
-            var remote_pcap = _pcapInterface.Name.StartsWith("rpcap://") 
-                || _pcapInterface.Name.StartsWith("rpcaps://")
-                || credentials != null;
+            var remote_pcap = _pcapInterface.Name.StartsWith("rpcap://")|| _pcapInterface.Name.StartsWith("rpcaps://");
             // Some configurations can only be used with pcap_create
             var use_pcap_create = !remote_pcap && (short)otherModes == 0;
             if (use_pcap_create)
             {
-                Handle = LibPcapSafeNativeMethods.pcap_create(
-                    Name, // name of the device
-                    out errbuf); // error buffer
+                Handle = LibPcapSafeNativeMethods.pcap_create(Name, out errbuf); // error buffer
 
                 if (Handle.IsInvalid)
                 {
@@ -150,8 +123,6 @@ namespace SharpPcap.LibPcap
             }
             else
             {
-                // We got authentication, so this is an rpcap device
-                var auth = RemoteAuthentication.CreateAuth(credentials);
                 // Immediate and MaxResponsiveness are the same thing
                 if (immediateMode == true)
                 {
@@ -166,12 +137,12 @@ namespace SharpPcap.LibPcap
                         configuration.Snaplen,              // portion of the packet to capture.
                         (short)mode,                        // flags
                         (short)configuration.ReadTimeout,   // read timeout
-                        ref auth,                           // authentication
+                        IntPtr.Zero,                           // authentication
                         out errbuf);                        // error buffer
                 }
                 catch (TypeLoadException)
                 {
-                    var reason = credentials != null ? "Remote PCAP" : "Requested DeviceModes";
+                    var reason = "Requested DeviceModes";
                     var err = $"Unable to open the adapter '{Name}'. {reason} is not supported";
                     throw new PcapException(err, PcapError.PlatformNotSupported);
                 }
@@ -183,44 +154,24 @@ namespace SharpPcap.LibPcap
                 }
             }
 
-            ConfigureIfCompatible(use_pcap_create,
-                configuration, nameof(configuration.TimestampResolution),
-                LibPcapSafeNativeMethods.pcap_set_tstamp_precision, (int?)configuration.TimestampResolution
-            );
-
-            ConfigureIfCompatible(use_pcap_create,
-                configuration, nameof(configuration.TimestampType),
-                LibPcapSafeNativeMethods.pcap_set_tstamp_type, (int?)configuration.TimestampType
-            );
-
-            ConfigureIfCompatible(use_pcap_create,
-                configuration, nameof(configuration.Monitor),
-                LibPcapSafeNativeMethods.pcap_set_rfmon, (int?)configuration.Monitor
-            );
-
-            ConfigureIfCompatible(use_pcap_create,
-                configuration, nameof(configuration.BufferSize),
-                LibPcapSafeNativeMethods.pcap_set_buffer_size, configuration.BufferSize
-            );
-
             if (immediateMode.HasValue)
             {
-                if (!immediate_supported && !mintocopy_supported)
-                {
-                    configuration.RaiseConfigurationFailed(
-                        nameof(configuration.Immediate),
-                        PcapError.PlatformNotSupported,
-                        "Immediate mode not available"
-                    );
-                }
-                else if (immediate_supported)
-                {
+                //if (!immediate_supported && !mintocopy_supported)
+                //{
+                //    configuration.RaiseConfigurationFailed(
+                //        nameof(configuration.Immediate),
+                //        PcapError.PlatformNotSupported,
+                //        "Immediate mode not available"
+                //    );
+                //}
+                //else if (immediate_supported)
+                //{
                     var immediate = immediateMode.Value ? 1 : 0;
                     Configure(
                         configuration, nameof(configuration.Immediate),
                         LibPcapSafeNativeMethods.pcap_set_immediate_mode, immediate
                     );
-                }
+                //}
             }
 
             // pcap_open returns an already activated device
@@ -246,7 +197,7 @@ namespace SharpPcap.LibPcap
                 LibPcapSafeNativeMethods.pcap_setbuff, configuration.KernelBufferSize
             );
 
-            if (immediateMode == true && mintocopy_supported && !immediate_supported)
+            if (immediateMode == true && mintocopy_supported)//&& !immediate_supported
             {
                 Configure(
                     configuration, nameof(configuration.Immediate),
@@ -259,86 +210,38 @@ namespace SharpPcap.LibPcap
             );
 
         }
-
-        private const int disableBlocking = 0;
-        private const int enableBlocking = 1;
-
-
-        /// <summary>
-        /// Set/Get Non-Blocking Mode. returns allways false for savefiles.
-        /// </summary>
-        public bool NonBlockingMode
+        public void SendPacket(ReadOnlySpan<byte> packet)
         {
-            get
+            ThrowIfNotOpen("Can't send packet, the device is closed");
+            byte[] rented = ArrayPool<byte>.Shared.Rent(packet.Length);
+            try
             {
-                ThrowIfNotOpen("Can't get blocking mode, the device is closed");
-                int ret = LibPcapSafeNativeMethods.pcap_getnonblock(Handle, out var errbuf);
-
-                // Errorbuf is only filled when ret = -1
-                if (ret == -1)
-                {
-                    string err = "Unable to get blocking mode. " + errbuf.ToString();
-                    throw new PcapException(err);
-                }
-
-                if (ret == enableBlocking)
-                    return true;
-                return false;
+                packet.CopyTo(rented);
+                int res = LibPcapSafeNativeMethods.pcap_sendpacket(Handle, rented, packet.Length);
+                if (res < 0)
+                    throw new PcapException("Can't send packet: " + LastError);
             }
-            set
+            finally
             {
-                ThrowIfNotOpen("Can't set blocking mode, the device is closed");
-
-                int block = disableBlocking;
-                if (value)
-                    block = enableBlocking;
-
-                int ret = LibPcapSafeNativeMethods.pcap_setnonblock(Handle, block, out var errbuf);
-
-                // Errorbuf is only filled when ret = -1
-                if (ret == -1)
-                {
-                    string err = "Unable to set blocking mode. " + errbuf.ToString();
-                    throw new PcapException(err);
-                }
+                ArrayPool<byte>.Shared.Return(rented);
             }
         }
-
         /// <summary>
         /// Sends a raw packet through this device
         /// </summary>
         /// <param name="p">The packet bytes to send</param>
-        public void SendPacket(ReadOnlySpan<byte> p, ICaptureHeader? header = null)
+        public void SendPacket(ReadOnlySpan<byte> packet,int length)
         {
             ThrowIfNotOpen("Can't send packet, the device is closed");
-            int res;
-            unsafe
+            try
             {
-                fixed (byte* p_packet = p)
-                {
-                    res = LibPcapSafeNativeMethods.pcap_sendpacket(Handle, new IntPtr(p_packet), p.Length);
-                }
+                int res = LibPcapSafeNativeMethods.pcap_sendpacket(Handle, packet.ToArray(), length);
+                if (res < 0)
+                    throw new PcapException("Can't send packet: " + LastError);
             }
-            if (res < 0)
+            catch
             {
                 throw new PcapException("Can't send packet: " + LastError);
-            }
-        }
-
-        /// <summary>
-        /// Retrieves pcap statistics
-        /// </summary>
-        /// <returns>
-        /// A <see cref="PcapStatistics"/>
-        /// </returns>
-        public override ICaptureStatistics Statistics
-        {
-            get
-            {
-                // can only call PcapStatistics on an open device
-                ThrowIfNotOpen("device not open");
-
-                return new PcapStatistics(Handle);
             }
         }
     }
